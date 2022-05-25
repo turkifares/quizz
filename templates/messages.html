@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% extends "adminLayout.html" %}
 {% block title %}messages{% endblock %}
 {% block head %}
   {{ super() }}
@@ -8,18 +8,21 @@
 {% endblock %}
 
 {% block content %}
-{% include 'partials/_nav.html' %}
-{% if data|length %}
-    variable is not empty
-{% else %}
-    variable is empty
-{% endif %}
-{%if data %}
-<ul>
+<div class="container">
+<table class="table table-hover">
+    <th scope="col">username id</th>
+    <th scope="col">message</th>
 {% for message in data%}
-<li>{{message[2]}} envoyé par l'utilisateur qui a id {{message[1]}}</li>
+  <tr>
+ <td>{{message.sender_id}}</td>
+  <td>{{message.message}}</td>
+    </tr>
 {%endfor%}
-</ul>
 
-{%endif%}
+
+
+</table>
+</div>
+
+
 {% endblock %}

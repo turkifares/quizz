@@ -16,19 +16,24 @@ mysql = MySQL(app)
 with app.app_context():
     cursor = mysql.connection.cursor()
     cursor.execute('''create table if not exists users (user_id int primary key AUTO_INCREMENT,username varchar(50),
-     totalPoints int default 0,email varchar(100), password varchar(100));''')
+     totalPoints int default 0,email varchar(100), password varchar(100),role int default 0);''')
     cursor.execute('''create table if not exists quiz (quiz_id int primary key AUTO_INCREMENT,question varchar(100)
          );''')
     cursor.execute('''create table if not exists messages (message_id int primary key AUTO_INCREMENT,sender_id int,
-      message varchar(300));''')
+      message varchar(300), foreign key (sender_id) references users(user_id));''')
+    cursor.execute('''create table if not exists answer (answer_id int primary key AUTO_INCREMENT,question_id int,
+          answer varchar(300),is_correct int, foreign key (question_id) references quiz(quiz_id));''')
     cursor.close()
 
 
 @app.route('/')
 def home():
     if 'loggedin' in session:
-        username = session['username']
-        return render_template('index.html', username=username)
+        if session['role'] == 1:
+            return render_template('adminPanel.html')
+        else:
+            username = session['username']
+            return render_template('index.html', username=username)
     else:
         return redirect(url_for('login'))
 
@@ -41,8 +46,9 @@ def contact():
 @app.route('/contact', methods=['post'])
 def store_message():
     message = request.form['message']
+    user_id = session['id']
     cursor = mysql.connection.cursor()
-    cursor.execute('''insert into messages (sender_id,message) values (2,%s);''', [message])
+    cursor.execute('''insert into messages (sender_id,message) values (%s,%s);''', [user_id, message])
     mysql.connection.commit()
     if cursor.rowcount != 0:
         flash('message envoyé avec succés ', )
@@ -52,14 +58,15 @@ def store_message():
 
 @app.route('/messages')
 def messages():
-    cursor = mysql.connection.cursor()
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cursor.execute('''select * from messages''')
     data = cursor.fetchall()
     cursor.close()
+
     return render_template('messages.html', data=data)
 
 
-@app.route('/login',methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     # Output message if something goes wrong...
     msg = ''
@@ -83,7 +90,7 @@ def login():
             session['loggedin'] = True
             session['id'] = account['user_id']
             session['username'] = account['username']
-
+            session['role'] = account['role']
             # Redirect to home page
             return redirect(url_for('home'))
         else:
@@ -141,12 +148,37 @@ def profile():
     return redirect(url_for('login'))
 
 
+@app.route('/utilisateurs', methods=['POST', 'GET'])
+def utilisateurs():
+    if request.method == 'POST':
+        id = int(request.form['id'])
+        cursor = mysql.connection.cursor()
+        cursor.execute('''delete from users where user_id=%s''', [id])
+        mysql.connection.commit()
+        if cursor.rowcount != 0:
+            flash('employé supprimé avec succés ')
+        cursor.close()
+        return redirect(url_for('utilisateurs'))
+    elif 'loggedin' in session:
+        if session['role'] == 1:
+            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute('SELECT * FROM users')
+            users = cursor.fetchall()
+            cursor.close()
+            return render_template('utilisateurs.html', users=users)
+        else:
+           return redirect(url_for('home'))
+    else:
+        return redirect(url_for('login'))
+
+
 @app.route('/logout')
 def logout():
     # Remove session data, this will log the user out
     session.pop('loggedin', None)
     session.pop('id', None)
     session.pop('username', None)
+    session.pop('role', None)
     # Redirect to login page
     return redirect(url_for('login'))
 
