@@ -42,16 +42,16 @@ def check_points():
     if request.method == 'POST':
         total_points = 0
         answers1 = request.form.getlist('answer1')
-        answer1 = bool(answers1)
+        answer1 = int(answers1[0])
         answers2 = request.form.getlist('answer2')
-        answer2 = bool(answers2)
+        answer2 = int(answers2[0])
         answers3 = request.form.getlist('answer3')
-        answer3 = bool(answers3)
-        if answer1:
+        answer3 = int(answers3[0])
+        if answer1 == 1:
             total_points = total_points + 1
-        if answer2:
+        if answer2 == 1:
             total_points = total_points + 1
-        if answer3:
+        if answer3 == 1:
             total_points = total_points + 1
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute('update users set totalPoints=totalPoints+%s where user_id=%s ;', [total_points, session['id']])
