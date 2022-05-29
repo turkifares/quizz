@@ -1,10 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends 'adminLayout.html' %}
+{% block title %}questions{% endblock %}
+{% block head %}
+  {{ super() }}
+  <style type="text/css">
+    .important { color: #336699; }
+  </style>
+{% endblock %}
+
+{% block content %}
+{% with messages = get_flashed_messages() %}
+   {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-success" role="alert">
+                    {{ message }}
+        </div>
+
+      {% endfor %}
+   {% endif %}
+{% endwith %}
+<div class="container">
+    <form action="{{url_for('store_questions')}}" method="post">
+        <div class="form-group">
+        <label for="question">question </label>
+        <input type="text" id ="question" placeholder="entrer la question" name="titre_question" class="form-control">
+        </div>
+        <br>
+        <div class="form-group">
+        <label for="reponse_correcte">reponse correcte </label>
+        <input type="text" id ="reponse_correcte" placeholder="entrer la reponse correcte" name="reponse_correcte" class="form-control">
+        </div>
+        <br>
+        <div class="form-group">
+        <label for="deuxieme_reponse">deuxieme reponse </label>
+        <input type="text" id ="deuxieme_reponse" placeholder="entrer la deuxieme reponse" name="deuxieme_reponse" class="form-control">
+        </div>
+        <br>
+        <div class="form-group">
+        <label for="troisieme_reponse">troisieme reponse </label>
+        <input type="text" id ="troisieme_reponse" placeholder="entrer la troisieme reponse" name="troisieme_reponse" class="form-control">
+        </div>
+        <br>
+        <div class="form-group">
+        <label for="quatrieme_reponse">quatrieme reponse </label>
+        <input type="text" id ="quatrieme_reponse" placeholder="entrer la quatrieme reponse" name="quatrieme_reponse" class="form-control">
+        </div>
+        <br>
+        <div class="form-group">
+         <input type="submit" id="valider" name="submit" class="btn btn-success">
+            <input type="reset" id="reset"  class="btn btn-danger">
+        </div>
+
+    </form>
+</div>
+
+
+{% endblock %}

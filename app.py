@@ -1,6 +1,5 @@
 import os
 import re
-
 import MySQLdb
 from flask import Flask, render_template, request, flash, url_for, redirect, session
 from flask_mysqldb import MySQL
@@ -36,6 +35,30 @@ def home():
             return render_template('index.html', username=username)
     else:
         return redirect(url_for('login'))
+
+
+@app.route('/', methods=['post'])
+def check_points():
+    if request.method == 'POST':
+        total_points = 0
+        answers1 = request.form.getlist('answer1')
+        answer1 = bool(answers1)
+        answers2 = request.form.getlist('answer2')
+        answer2 = bool(answers2)
+        answers3 = request.form.getlist('answer3')
+        answer3 = bool(answers3)
+        if answer1:
+            total_points = total_points + 1
+        if answer2:
+            total_points = total_points + 1
+        if answer3:
+            total_points = total_points + 1
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('update users set totalPoints=totalPoints+%s where user_id=%s ;', [total_points, session['id']])
+        mysql.connection.commit()
+        cursor.close()
+        flash('vous avez obtenu {} points'.format(total_points))
+        return redirect(url_for('home'))
 
 
 @app.route('/contact')
@@ -129,6 +152,7 @@ def register():
             # Account doesnt exists and the form data is valid, now insert new account into accounts table
             cursor.execute('INSERT INTO users (username,email,password) VALUES (%s, %s, %s)', [username, email, password])
             mysql.connection.commit()
+            cursor.close()
             msg = 'You have successfully registered!'
             return render_template('register.html', msg=msg)
     return render_template('register.html')
@@ -142,6 +166,7 @@ def profile():
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute('SELECT * FROM users WHERE user_id = %s', (session['id'],))
         account = cursor.fetchone()
+        cursor.close()
         # Show the profile page with account info
         return render_template('profile.html', account=account)
     # User is not loggedin redirect to login page
@@ -167,9 +192,66 @@ def utilisateurs():
             cursor.close()
             return render_template('utilisateurs.html', users=users)
         else:
-           return redirect(url_for('home'))
+            return redirect(url_for('home'))
     else:
         return redirect(url_for('login'))
+
+
+@app.route('/questions')
+def questions():
+    if session['role'] == 1:
+        return render_template('questions.html')
+    else:
+        return redirect(url_for('login'))
+
+
+@app.route('/questions', methods=['POST'])
+def store_questions():
+    titre = request.form['titre_question']
+    cursor = mysql.connection.cursor()
+    cursor.execute('''insert into quiz (question) values (%s);''', [titre])
+    mysql.connection.commit()
+    question_id = cursor.lastrowid
+    correct_answer = request.form['reponse_correcte']
+    cursor.execute('''insert into answer (question_id,answer,is_correct) values (%s,%s,1);''', [question_id, correct_answer])
+    mysql.connection.commit()
+    cursor = mysql.connection.cursor()
+    second_answer = request.form['deuxieme_reponse']
+    third_answer = request.form['troisieme_reponse']
+    fourth_answer = request.form['quatrieme_reponse']
+    cursor.execute('''insert into answer (question_id,answer,is_correct) values (%s,%s,0);''', [question_id, second_answer])
+    mysql.connection.commit()
+    cursor.execute('''insert into answer (question_id,answer,is_correct) values (%s,%s,0);''',[question_id, third_answer])
+    mysql.connection.commit()
+    cursor.execute('''insert into answer (question_id,answer,is_correct) values (%s,%s,0);''',[question_id, fourth_answer])
+    mysql.connection.commit()
+    cursor.close()
+    flash('quiz ajouté avec succéss')
+    return redirect(url_for('questions'))
+
+
+@app.route('/quizGame', methods=['post'])
+def get_questions():
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT * FROM quiz ORDER BY RAND() LIMIT 3;')
+    data = cursor.fetchall()
+    cursor.execute('SELECT * FROM answer where question_id=%s ORDER BY RAND();', [data[0]['quiz_id']])
+    answers1 = cursor.fetchall()
+    cursor.execute('SELECT * FROM answer where question_id=%s ORDER BY RAND();', [data[1]['quiz_id']])
+    answers2 = cursor.fetchall()
+    cursor.execute('SELECT * FROM answer where question_id=%s ORDER BY RAND();', [data[2]['quiz_id']])
+    answers3 = cursor.fetchall()
+    cursor.close()
+    return render_template('game.html', question1=data[0]['question'], answers1=answers1, question2=data[1]['question'], answers2=answers2, question3=data[2]['question'], answers3=answers3 )
+
+
+@app.route('/classement')
+def classement():
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT username,totalPoints FROM users where role=0 ORDER BY totalPoints desc ;')
+    data = cursor.fetchall()
+    cursor.close()
+    return render_template('classement.html', data=data)
 
 
 @app.route('/logout')
